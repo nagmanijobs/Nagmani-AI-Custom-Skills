@@ -1,0 +1,37 @@
+name: Sync Skills To Repositories
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/skills/**'
+      - '.github/scripts/sync-skills-to-repos.sh'
+      - '.github/workflows/sync-skills.yml'
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+
+      - name: Setup GitHub CLI auth
+        run: |
+          gh auth status
+        env:
+          GH_TOKEN: ${{ secrets.SKILL_SYNC_TOKEN }}
+
+      - name: Sync skills to repositories
+        run: .github/scripts/sync-skills-to-repos.sh
+        env:
+          GH_TOKEN: ${{ secrets.SKILL_SYNC_TOKEN }}
+          TARGET_OWNER: nagmanijobs
+          TARGET_OWNER_TYPE: user
+          SKIP_REPOS_CSV: nagmanijobs/Nagmani-AI-Custom-Skills
