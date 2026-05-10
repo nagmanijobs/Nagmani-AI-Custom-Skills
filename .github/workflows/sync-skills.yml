@@ -10,6 +10,11 @@ on:
   schedule:
     - cron: '0 * * * *'
   workflow_dispatch:
+    inputs:
+      target_repos_csv:
+        description: 'Optional allowlist of repos (comma-separated owner/repo). Example: nagmanijobs/Github_Action_Certification,nagmanijobs/another-repo'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -34,4 +39,5 @@ jobs:
           GH_TOKEN: ${{ secrets.SKILL_SYNC_TOKEN }}
           TARGET_OWNER: nagmanijobs
           TARGET_OWNER_TYPE: user
+          TARGET_REPOS_CSV: ${{ github.event.inputs.target_repos_csv }}
           SKIP_REPOS_CSV: nagmanijobs/Nagmani-AI-Custom-Skills

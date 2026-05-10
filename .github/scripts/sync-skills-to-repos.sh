@@ -6,6 +6,7 @@ set -euo pipefail
 # - TARGET_OWNER (required)
 # - TARGET_OWNER_TYPE (optional: user|org, default: user)
 # - GH_TOKEN (required, PAT with repo scope)
+# - TARGET_REPOS_CSV (optional: comma-separated full repo names; if set, only these repos are synced)
 # - SKIP_REPOS_CSV (optional: comma-separated full repo names)
 
 if [[ -z "${TARGET_OWNER:-}" ]]; then
@@ -19,6 +20,7 @@ if [[ -z "${GH_TOKEN:-}" ]]; then
 fi
 
 TARGET_OWNER_TYPE="${TARGET_OWNER_TYPE:-user}"
+TARGET_REPOS_CSV="${TARGET_REPOS_CSV:-}"
 SKIP_REPOS_CSV="${SKIP_REPOS_CSV:-}"
 SYNC_BRANCH="chore/sync-copilot-skills"
 SOURCE_ROOT="${GITHUB_WORKSPACE:-$(pwd)}"
@@ -31,6 +33,18 @@ fi
 
 IFS=',' read -r -a SKIP_REPOS <<< "$SKIP_REPOS_CSV"
 
+if [[ -n "$TARGET_REPOS_CSV" ]]; then
+  IFS=',' read -r -a repos <<< "$TARGET_REPOS_CSV"
+  echo "Using explicit allowlist from TARGET_REPOS_CSV"
+else
+  echo "Discovering repositories for owner '$TARGET_OWNER' (type: $TARGET_OWNER_TYPE)..."
+  if [[ "$TARGET_OWNER_TYPE" == "org" ]]; then
+    mapfile -t repos < <(gh api --paginate "orgs/$TARGET_OWNER/repos?per_page=100&type=all" --jq '.[] | select(.archived == false) | .full_name')
+  else
+    mapfile -t repos < <(gh api --paginate "users/$TARGET_OWNER/repos?per_page=100&type=owner" --jq '.[] | select(.archived == false) | .full_name')
+  fi
+fi
+
 should_skip_repo() {
   local repo="$1"
   for skipped in "${SKIP_REPOS[@]}"; do
@@ -40,13 +54,6 @@ should_skip_repo() {
   done
   return 1
 }
-
-echo "Discovering repositories for owner '$TARGET_OWNER' (type: $TARGET_OWNER_TYPE)..."
-if [[ "$TARGET_OWNER_TYPE" == "org" ]]; then
-  mapfile -t repos < <(gh api --paginate "orgs/$TARGET_OWNER/repos?per_page=100&type=all" --jq '.[] | select(.archived == false) | .full_name')
-else
-  mapfile -t repos < <(gh api --paginate "users/$TARGET_OWNER/repos?per_page=100&type=owner" --jq '.[] | select(.archived == false) | .full_name')
-fi
 
 if [[ "${#repos[@]}" -eq 0 ]]; then
   echo "No repositories found for owner '$TARGET_OWNER'."
