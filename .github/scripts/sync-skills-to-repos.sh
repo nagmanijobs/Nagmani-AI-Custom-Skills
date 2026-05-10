@@ -78,6 +78,11 @@ for repo in "${repos[@]}"; do
   mkdir -p "$repo_dir/.github/skills"
   rsync -a --delete "$SOURCE_SKILLS_DIR/" "$repo_dir/.github/skills/"
 
+  # Also sync prompt examples if they exist
+  if [[ -f "$SOURCE_ROOT/.github/skills/PROMPT_EXAMPLES.md" ]]; then
+    cp "$SOURCE_ROOT/.github/skills/PROMPT_EXAMPLES.md" "$repo_dir/.github/skills/PROMPT_EXAMPLES.md"
+  fi
+
   if git -C "$repo_dir" diff --quiet; then
     echo "No changes needed for $repo"
     continue
